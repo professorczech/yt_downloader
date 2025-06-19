@@ -1,2 +1,4 @@
 pytube
 yt_dlp
+flask
+"flask-socketio[client]" eventlet
