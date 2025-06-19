@@ -1,0 +1,26 @@
+/* Custom scrollbar for WebKit browsers */
+body::-webkit-scrollbar { width: 8px; }
+body::-webkit-scrollbar-thumb {
+  background: #6366f1; /* indigo-500 */
+  border-radius: 4px;
+}
+body::-webkit-scrollbar-track {
+  background: transparent;
+}
+body::-webkit-scrollbar-thumb {
+  background: #6366f1;  /* indigo-500 */
+  border-radius: 4px;
+}
+
+/* Fine-tune scrollbar colours for dark theme */
+body.dark ::-webkit-scrollbar-thumb { background: #4f46e5; }
+
+/* show a border around the card if Tailwind utilities are missing */
+form { border: 1px solid rgba(99, 102, 241, .4); }  /* indigo-500/40 */
+@supports (backdrop-filter: blur(10px)) {
+  /* remove when real styles apply */
+  form { border: none; }
+}
+
+/* Slight glow around fill for dark-mode contrast */
+#bar { box-shadow: 0 0 6px 0 rgba(155, 95, 255, .6); }
