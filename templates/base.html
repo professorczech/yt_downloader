@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>YouTube → MP4 Downloader</title>
+
+  <!-- Tailwind v3 + forms plugin -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+  <!-- Hard-fallback if JS/CSP blocks above -->
+  <noscript>
+    <link rel="stylesheet"
+          href="https://unpkg.com/tailwindcss@3.4.4/dist/tailwind.min.css">
+  </noscript>
+
+  <meta name="color-scheme" content="light dark"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="min-h-screen antialiased
+             bg-gray-50 dark:bg-gray-900
+             text-gray-900 dark:text-gray-100 flex flex-col">
+
+  <!-- Top bar -->
+  <header class="bg-gradient-to-r from-indigo-700 to-violet-600 text-white shadow-md">
+    <div class="max-w-5xl mx-auto px-4 py-3">
+      <h1 class="text-2xl font-semibold tracking-wide">
+        YouTube → MP4 Downloader
+      </h1>
+    </div>
+  </header>
+
+  <main class="flex-1">
+    <div class="max-w-5xl mx-auto p-4">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="bg-gray-200 dark:bg-gray-800 text-sm
+                 text-gray-700 dark:text-gray-300">
+    <div class="max-w-5xl mx-auto px-4 py-3">© 2025 YT Station</div>
+  </footer>
+</body>
+</html>

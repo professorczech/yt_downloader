@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- ───────── FORM CARD ───────── -->
+<div class="relative flex justify-center px-4 py-14">
+  <div class="relative z-10 w-full max-w-3xl p-8
+              bg-white/90 dark:bg-gray-800/80 backdrop-blur-md
+              rounded-2xl shadow-2xl ring-1 ring-gray-300 dark:ring-gray-700">
+
+    <!-- keep action="#" so the browser never targets /download itself -->
+    <form id="dlForm" action="#" method="post"
+          class="grid gap-6 sm:grid-cols-2">
+      <!-- URL -->
+      <div class="sm:col-span-2">
+        <label class="block font-medium mb-1">YouTube URL</label>
+        <input name="url" type="url" required placeholder="https://youtu.be/…"
+               class="w-full px-3 py-2 rounded-md border-2 border-gray-300
+                      dark:border-gray-600 bg-white/75 dark:bg-gray-900/50
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      </div>
+
+      <!-- Speed -->
+      <div>
+        <label class="block font-medium mb-1">Max speed (MB/s)</label>
+        <input name="speed" type="number" step="0.1" min="0"
+               class="w-full px-3 py-2 rounded-md border-2 border-gray-300
+                      dark:border-gray-600 bg-white/75 dark:bg-gray-900/50
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      </div>
+
+      <!-- Folder -->
+      <div>
+        <label class="block font-medium mb-1">Output folder</label>
+        <input name="folder" value="{{ default_dir }}"
+               class="w-full px-3 py-2 rounded-md border-2 border-gray-300
+                      dark:border-gray-600 bg-white/75 dark:bg-gray-900/50
+                      focus:outline-none focus:ring-2 focus:ring-indigo-500"/>
+      </div>
+
+      <!-- Cookies -->
+      <div class="sm:col-span-2 flex items-center">
+        <input id="ck" name="cookies" type="checkbox"
+               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500
+                      border-gray-300 rounded">
+        <label for="ck" class="ml-2 select-none">Use Brave cookies</label>
+      </div>
+
+      <!-- Button -->
+      <div class="sm:col-span-2">
+        <button
+          class="w-full sm:w-auto px-6 py-2 rounded-md
+                 bg-indigo-600 hover:bg-indigo-700 active:scale-95
+                 text-white shadow-md hover:shadow-xl transition">
+          Start Download
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Halo -->
+  <div class="absolute inset-0 z-0 pointer-events-none rounded-2xl
+              bg-gradient-to-br from-purple-400/30 via-transparent to-indigo-400/20
+              blur-xl saturate-150"></div>
+</div>
+
+<!-- ─────────── PROGRESS BAR ──────────── -->
+<div id="progWrap" class="hidden max-w-3xl mx-auto">
+  <div class="flex justify-between text-sm mb-1">
+    <span id="pctLabel">0 %</span>
+    <span id="etaLabel">ETA —</span>
+  </div>
+
+  <!-- rail -->
+  <div class="w-full bg-gray-700/50 rounded-full overflow-hidden">
+    <!-- animated fill -->
+    <div id="bar"
+         class="h-4 w-0 bg-indigo-500 transition-all duration-150"></div>
+  </div>
+
+  <p id="speedLabel"
+     class="mt-2 text-xs text-gray-400">— KiB/s</p>
+</div>
+
+<!-- ───────── COMPLETED FILES ───────── -->
+<h2 class="mt-12 mb-4 text-xl font-semibold">Completed files</h2>
+<ul class="space-y-1 max-w-3xl">
+  {% for f in files %}
+    <li><a href="{{ url_for('downloads', filename=f) }}"
+           class="text-indigo-600 dark:text-indigo-400 hover:underline break-all">
+           {{ f }}</a></li>
+  {% else %}
+    <li class="text-gray-500 dark:text-gray-400">None yet.</li>
+  {% endfor %}
+</ul>
+
+<!-- ───────── SCRIPTS ───────── -->
+<script src="{{ url_for('static', filename='socket.io.js') }}"></script>
+
+<!-- 2.  Page-specific logic  -->
+<script>
+/* ---- globals ---- */
+const socket = io();                    // → now guaranteed to exist
+const form   = document.getElementById("dlForm");
+const wrap   = document.getElementById("progWrap");
+const bar    = document.getElementById("bar");
+const pct    = document.getElementById("pctLabel");
+const eta    = document.getElementById("etaLabel");
+const speed  = document.getElementById("speedLabel");
+const GRADIENT = [226, 276]; // indigo-500 → violet-500 in HSL (hues)
+
+let   jobID  = null;
+
+
+/* ---- hook form submit ---- */
+form.addEventListener("submit", async (ev) => {
+  ev.preventDefault();                  // stop normal navigation
+  const res = await fetch("/download", {
+    method: "POST",
+    body:   new FormData(form),
+  });
+  if (!res.ok) return alert("Server error " + res.status);
+  jobID = (await res.json()).job;
+
+  // reset bar + show wrapper
+  bar.style.width = "0%";
+  pct.textContent = "0 %";
+  eta.textContent = "ETA —";
+  speed.textContent = "— KiB/s";
+  wrap.classList.remove("hidden");
+});
+
+/* ---- live updates ---- */
+socket.on("progress", (d) => {
+  if (d.job !== jobID) return;
+
+  // clean numbers -------------------------------------------------
+  const pctFloat = parseFloat(d.pct);                // e.g. 45.3
+  const pctStr   = pctFloat.toFixed(1) + " %";
+  const etaStr   = d.eta.replace(/\s/g,"") || "—";
+  const speedStr = d.speed || "—";
+
+  // update labels & bar ------------------------------------------
+  pct.textContent   = pctStr;
+  eta.textContent   = "ETA " + etaStr;
+  speed.textContent = speedStr + "/s";
+
+  // bar length
+  bar.style.width = pctFloat + "%";
+
+  // bar colour – interpolate hue
+  const hue = GRADIENT[0] + (GRADIENT[1]-GRADIENT[0]) * (pctFloat/100);
+  bar.style.backgroundColor = `hsl(${hue}, 100%, 60%)`;
+});
+socket.on("complete", (d) => {
+  if (d.job !== jobID) return;
+  eta.textContent = "Finished ✔";
+  bar.style.width = "100%";
+  pct.textContent = "100 %";
+  setTimeout(() => location.reload(), 1200);
+});
+socket.on("error", (d) => {
+  if (d.job !== jobID) return;
+  bar.classList.add("bg-red-600");
+  eta.textContent = "Error: " + d.msg;
+});
+</script>
+{% endblock %}
